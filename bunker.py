@@ -45,13 +45,46 @@ class Character:
             self.alive = False
         return self.alive
 
-
 class CharacterFactory:
     def create_character(self, name):
         low_name = name.lower()
         if low_name == "pet" or low_name == "dog" or low_name == "cat":
             return Character(name, True)
         return Character(name, False)
+
+
+class BunkerEvent:
+    def __init__(self, text, item_needed, win_text, lose_text, event_type):
+        self.text = text
+        self.item_needed = item_needed
+        self.win_text = win_text
+        self.lose_text = lose_text
+        self.event_type = event_type
+
+    def execute(self, characters, storage):
+        print(f"\n[EVENT]: {self.text}")
+        if self.item_needed and storage.get(self.item_needed) > 0:
+            storage.change(self.item_needed, -1)
+            print(f"Success! You used: {self.item_needed}")
+            print(self.win_text)
+        elif self.item_needed:
+            print(f"Failure! {self.lose_text}")
+            self.apply_penalty(characters, storage)
+        else:
+            print(self.win_text)
+
+    def apply_penalty(self, characters, storage):
+        if self.event_type == "raid":
+            storage.change("Water", -1)
+            storage.change("Food", -1)
+        elif self.event_type == "darkness":
+            storage.change("Medkit", -1)
+        elif self.event_type == "infection":
+            alive_humans = [c for c in characters if c.alive and not c.is_pet]
+            if alive_humans:
+                target = random.choice(alive_humans)
+                target.sick = True
+                print(f"Warning: {target.name} is now sick!")
 
 
 def bunker_phase(backpack):
