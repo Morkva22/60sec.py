@@ -25,9 +25,33 @@ class BunkerStorage:
 
 storage = BunkerStorage()
 
+class Character:
+    def __init__(self, name, is_pet):
+        self.name = name
+        self.is_pet = is_pet
+        self.alive = True
+        self.water_debt = 0
+        self.food_debt = 0
+        self.sick = False
+        self.depression = 0
+
+    def check_health(self):
+        if not self.alive:
+            return False
 
 
+        if (self.water_debt >= 3 and not self.is_pet) or self.food_debt >= 5 or self.depression >= 3:
+            print(f"{self.name} died or went insane...")
+            self.alive = False
+        return self.alive
 
+
+class CharacterFactory:
+    def create_character(self, name):
+        low_name = name.lower()
+        if low_name == "pet" or low_name == "dog" or low_name == "cat":
+            return Character(name, True)
+        return Character(name, False)
 
 
 def bunker_phase(backpack):
