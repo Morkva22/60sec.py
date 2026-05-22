@@ -1,4 +1,6 @@
 import random
+
+
 class BunkerStorage:
     def __init__(self):
         self.stocks = {
@@ -23,7 +25,9 @@ class BunkerStorage:
         if self.stocks[item] < 0:
             self.stocks[item] = 0
 
+
 storage = BunkerStorage()
+
 
 class Character:
     def __init__(self, name, is_pet):
@@ -39,11 +43,18 @@ class Character:
         if not self.alive:
             return False
 
-
         if (self.water_debt >= 3 and not self.is_pet) or self.food_debt >= 5 or self.depression >= 3:
-            print(f"{self.name} died or went insane...")
+            print(f"[SYSTEM LOG]: {self.name} died or went insane...")
             self.alive = False
         return self.alive
+
+
+
+
+
+
+
+
 
 class CharacterFactory:
     def create_character(self, name):
@@ -87,11 +98,199 @@ class BunkerEvent:
                 print(f"Warning: {target.name} is now sick!")
 
 
+class BunkerManager:
+    def __init__(self, backpack):
+        self.day = 0
+        storage.init_stocks(backpack)
+
+        known_items = ["Water", "Food", "Medkit", "Axe", "Radio", "Flashlight"]
+        self.characters = {}
+
+        factory = CharacterFactory()
+
+        for item in backpack:
+            if item not in known_items and item not in self.characters:
+                self.characters[item] = factory.create_character(item)
+
+        self.events_pool = [
+            BunkerEvent("Raiders are here!", "Axe", "Chased them!", "Lost 1 Water, 1 Food.", "raid"),
+            BunkerEvent("Lights out!", "Flashlight", "Fixed it!", "Lost 1 Medkit in dark.", "darkness"),
+            BunkerEvent("Mutant bugs attack!", "Axe", "Smashed them!", "Someone got sick.", "infection")
+        ]
+
+    def show_status(self):
+        print("\n--- STATUS ---")
+        print(f"Stocks: {storage.stocks}")
+        for c in self.characters.values():
+            if c.alive:
+                health = "SICK" if c.sick else "OK"
+                print(
+                    f"{c.name} -> Water debt: {c.water_debt}/3 | Food debt: {c.food_debt}/5 | [{health}] | Depr: {c.depression}/3")
+
+
+    def feeding_phase(self):
+        print("\n--- FEEDING ---")
+        for c in self.characters.values():
+            if not c.alive: continue
+
+            print(f"\nManaging {c.name}:")
+
+            if not c.is_pet:
+                choice_w = input(f"Give WATER to {c.name}? (1-Yes, 0-No): ")
+                if choice_w == "1" and storage.get("Water") > 0:
+                    storage.change("Water", -1)
+                    c.water_debt = 0
+                else:
+                    c.water_debt += 1
+                    if c.water_debt >= 2:
+                        c.depression += 1
+            else:
+                c.water_debt = 0
+
+            choice_f = input(f"Give FOOD to {c.name}? (1-Yes, 0-No): ")
+            if choice_f == "1" and storage.get("Food") > 0:
+                storage.change("Food", -1)
+                c.food_debt = 0
+            else:
+                c.food_debt += 1
+                if c.food_debt >= 3:
+                    c.depression += 1
+
+            if c.sick:
+                choice_m = input(f"Use Medkit on {c.name}? (1-Yes, 0-No): ")
+                if choice_m == "1" and storage.get("Medkit") > 0:
+                    storage.change("Medkit", -1)
+                    c.sick = False
+
+            c.check_health()
+
+    def run_expedition(self):
+        scouts = []
+        for c in self.characters.values():
+            if c.alive and c.is_pet == False:
+                scouts.append(c.name)
+
+        if not scouts: return
+
+        print("\nChoose scout:")
+        for i, name in enumerate(scouts):
+            print(f"{i + 1} - {name}")
+
+        try:
+            index = int(input(">> ")) - 1
+            chosen = scouts[index]
+            print(f"{chosen} left the bunker on a quick scout run...")
+
+            outcome = random.randint(1, 3)
+            if outcome == 1:
+                print(f"{chosen} died in the Wasteland.")
+                self.characters[chosen].alive = False
+            elif outcome == 2:
+                print(f"{chosen} returned empty-handed.")
+            else:
+                print(f"{chosen} returned safely and brought 2 Water, 2 Food!")
+                storage.change("Water", 2)
+                storage.change("Food", 2)
+        except:
+            print("Action cancelled.")
+
+
+
+#Test
+    def automated_feeding_test(self, feed_all=True):
+        print("\n--- AUTOMATED FEEDING TEST ---")
+        for c in self.characters.values():
+            if not c.alive: continue
+
+            print(f"Processing {c.name} (Auto)...")
+            if feed_all:
+                if not c.is_pet and storage.get("Water") > 0:
+                    storage.change("Water", -1)
+                    c.water_debt = 0
+                elif not c.is_pet:
+                    c.water_debt += 1
+
+                if storage.get("Food") > 0:
+                    storage.change("Food", -1)
+                    c.food_debt = 0
+                else:
+                    c.food_debt += 1
+            else:
+                if not c.is_pet:
+                    c.water_debt += 1
+                c.food_debt += 1
+
+            c.check_health()
+
+
+
+#Test
+    def automated_expedition_test(self):
+        print("\n--- AUTOMATED EXPEDITION TEST ---")
+        scouts = [c.name for c in self.characters.values() if c.alive and not c.is_pet]
+
+        if not scouts:
+            print("No scouts available.")
+            return
+
+        chosen = scouts[0]
+        print(f"[AUTO]: Sending {chosen} to the Wasteland...")
+
+        print(f"[AUTO]: {chosen} returned safely and brought 2 Water, 2 Food!")
+        storage.change("Water", 2)
+        storage.change("Food", 2)
+
+
+
+
+
+
+
+# -------------------------------------------------------------
+# THE SYSTEM TEST FOR BUNKER MANAGER
+
 def bunker_phase(backpack):
-    return None
+    print("==================================================")
+    print("===      STARTING MANAGER COMPONENT TEST       ===")
+    print("==================================================")
+
+    # 1. Initialize the Manager
+    print("\n[STEP 1]: Initializing BunkerManager...")
+    manager = BunkerManager(backpack)
+    manager.show_status()
+
+    # 2. Test Event execution via Manager's pool
+    print("\n[STEP 2]: Triggering a random event from the pool...")
+    test_event = manager.events_pool[0]  # Raiders event (Needs Axe)
+    test_event.execute(list(manager.characters.values()), storage)
+    manager.show_status()
+
+    # 2. Тест экспедиции (Проверяем, прибавятся ли ресурсы)
+    print("\n[STEP 2]: Simulating an Expedition...")
+    print(f"Stocks BEFORE expedition: Water={storage.get('Water')}, Food={storage.get('Food')}")
+    manager.automated_expedition_test()
+    print(f"Stocks AFTER expedition: Water={storage.get('Water')}, Food={storage.get('Food')}")
+    manager.show_status()
+
+
+    # 3. Test Resources Distribution (Feeding Phase)
+    print("\n[STEP 3]: Testing Automated Resource Distribution...")
+    manager.automated_feeding_test(feed_all=True)
+    manager.show_status()
+
+    # 4. Test Sickness and Penalty Simulation
+    print("\n[STEP 4]: Forcing infection penalty test...")
+    storage.change("Axe", -storage.get("Axe"))
+    infection_event = manager.events_pool[2]
+    infection_event.execute(list(manager.characters.values()), storage)
+    manager.show_status()
+
+    print("\n==================================================")
+    print("===          COMPONENT TEST COMPLETE           ===")
+    print("==================================================")
 
 
 if __name__ == "__main__":
-    test_backpack = ["Alex", "Bob", "Pet", "Water", "Water", "Food", "Axe", "Radio", "Flashlight"]
+    # Test dataset containing humans, a pet, and a set of utilities
+    test_backpack = ["Alex", "Bob", "Pet", "Water", "Water", "Food", "Axe", "Flashlight"]
     bunker_phase(test_backpack)
-

@@ -3,7 +3,7 @@ from bunker import bunker_phase
 
 
 def main():
-    print("        WELCOME TO 60 SECONDS (PYTHON)            ")
+    print("        WELCOME TO 60 SECONDS          ")
 
     backpack = scavenge_phase()
 
